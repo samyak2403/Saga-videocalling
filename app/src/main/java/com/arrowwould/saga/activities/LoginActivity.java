@@ -9,10 +9,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
-import org.jetbrains.annotations.NotNull;
+
 import com.arrowwould.saga.R;
 import com.arrowwould.saga.models.User;
-import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -28,10 +27,10 @@ import com.google.firebase.database.FirebaseDatabase;
 
 public class LoginActivity extends AppCompatActivity {
 
-    GoogleSignInClient mGoogleSignInClient;
-    int RC_SIGN_IN = 11;
-    FirebaseAuth mAuth;
-    FirebaseDatabase database;
+    private static final int RC_SIGN_IN = 11;
+    private GoogleSignInClient mGoogleSignInClient;
+    private FirebaseAuth mAuth;
+    private FirebaseDatabase database;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,14 +38,11 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         mAuth = FirebaseAuth.getInstance();
+        database = FirebaseDatabase.getInstance();
 
-
-
-        if(mAuth.getCurrentUser() != null) {
+        if (mAuth.getCurrentUser() != null) {
             goToNextActivity();
         }
-
-        database = FirebaseDatabase.getInstance();
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
@@ -60,56 +56,72 @@ public class LoginActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Intent intent = mGoogleSignInClient.getSignInIntent();
                 startActivityForResult(intent, RC_SIGN_IN);
-                //startActivity(new Intent(LoginActivity.this, MainActivity.class));
             }
         });
     }
 
-    void goToNextActivity() {
+    private void goToNextActivity() {
         startActivity(new Intent(LoginActivity.this, MainActivity.class));
         finish();
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable @org.jetbrains.annotations.Nullable Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if(requestCode == RC_SIGN_IN) {
+        if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            GoogleSignInAccount account = task.getResult();
-            authWithGoogle(account.getIdToken());
+            try {
+                GoogleSignInAccount account = task.getResult();
+                if (account != null) {
+                    authWithGoogle(account.getIdToken());
+                } else {
+                    showToast("Google Sign-In failed.");
+                }
+            } catch (Exception e) {
+                Log.e("LoginActivity", "Google Sign-In failed: " + e.getMessage());
+                showToast("Google Sign-In failed.");
+            }
         }
     }
 
-    void authWithGoogle(String idToken) {
+    private void authWithGoogle(String idToken) {
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
         mAuth.signInWithCredential(credential)
-                .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
-                    public void onComplete(@NonNull @NotNull Task<AuthResult> task) {
-                        if(task.isSuccessful()){
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
                             FirebaseUser user = mAuth.getCurrentUser();
-                            User firebaseUser = new User(user.getUid(), user.getDisplayName(), user.getPhotoUrl().toString(), "Unknown", 500);
-                            database.getReference()
-                                    .child("profiles")
-                                    .child(user.getUid())
-                                    .setValue(firebaseUser).addOnCompleteListener(new OnCompleteListener<Void>() {
-                                        @Override
-                                        public void onComplete(@NonNull @NotNull Task<Void> task) {
-                                            if(task.isSuccessful()){
-                                                startActivity(new Intent(LoginActivity.this, MainActivity.class));
-                                                finishAffinity();
-                                            } else {
-                                                Toast.makeText(LoginActivity.this, task.getException().getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                            if (user != null) {
+                                User firebaseUser = new User(user.getUid(), user.getDisplayName(),
+                                        user.getPhotoUrl() != null ? user.getPhotoUrl().toString() : "",
+                                        "Unknown", 500);
+                                database.getReference()
+                                        .child("profiles")
+                                        .child(user.getUid())
+                                        .setValue(firebaseUser)
+                                        .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<Void> task) {
+                                                if (task.isSuccessful()) {
+                                                    startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                                                    finishAffinity();
+                                                } else {
+                                                    showToast(task.getException().getLocalizedMessage());
+                                                }
                                             }
-                                        }
-                                    });
-                            //Log.e("profile", user.getPhotoUrl().toString());
+                                        });
+                            }
                         } else {
-                            Log.e("err", task.getException().getLocalizedMessage());
+                            Log.e("LoginActivity", "Authentication failed: " + task.getException().getLocalizedMessage());
+                            showToast("Authentication failed.");
                         }
                     }
                 });
     }
 
+    private void showToast(String message) {
+        Toast.makeText(LoginActivity.this, message, Toast.LENGTH_SHORT).show();
+    }
 }

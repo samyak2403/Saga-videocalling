@@ -29,28 +29,26 @@ import java.util.UUID;
 
 public class CallActivity extends AppCompatActivity {
 
-    ActivityCallBinding binding;
-    String uniqueId = "";
-    FirebaseAuth auth;
-    String username = "";
-    String friendsUsername = "";
+    private ActivityCallBinding binding;
+    private String uniqueId = "";
+    private FirebaseAuth auth;
+    private String username = "";
+    private String friendsUsername = "";
 
-    boolean isPeerConnected = false;
+    private boolean isPeerConnected = false;
+    private DatabaseReference firebaseRef;
 
-    DatabaseReference firebaseRef;
+    private boolean isAudio = true;
+    private boolean isVideo = true;
+    private String createdBy;
 
-    boolean isAudio = true;
-    boolean isVideo = true;
-    String createdBy;
-
-    boolean pageExit = false;
+    private boolean pageExit = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityCallBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-
 
         auth = FirebaseAuth.getInstance();
         firebaseRef = FirebaseDatabase.getInstance().getReference().child("users");
@@ -59,11 +57,6 @@ public class CallActivity extends AppCompatActivity {
         String incoming = getIntent().getStringExtra("incoming");
         createdBy = getIntent().getStringExtra("createdBy");
 
-//        friendsUsername = "";
-//
-//        if(incoming.equalsIgnoreCase(friendsUsername))
-//            friendsUsername = incoming;
-
         friendsUsername = incoming;
 
         setupWebView();
@@ -71,26 +64,14 @@ public class CallActivity extends AppCompatActivity {
         binding.micBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                isAudio = !isAudio;
-                callJavaScriptFunction("javascript:toggleAudio(\""+isAudio+"\")");
-                if(isAudio){
-                    binding.micBtn.setImageResource(R.drawable.btn_unmute_normal);
-                } else {
-                    binding.micBtn.setImageResource(R.drawable.btn_mute_normal);
-                }
+                toggleAudio();
             }
         });
 
         binding.videoBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                isVideo = !isVideo;
-                callJavaScriptFunction("javascript:toggleVideo(\""+isVideo+"\")");
-                if(isVideo){
-                    binding.videoBtn.setImageResource(R.drawable.btn_video_normal);
-                } else {
-                    binding.videoBtn.setImageResource(R.drawable.btn_video_muted);
-                }
+                toggleVideo();
             }
         });
 
@@ -100,11 +81,9 @@ public class CallActivity extends AppCompatActivity {
                 finish();
             }
         });
-
-
     }
 
-    void setupWebView() {
+    private void setupWebView() {
         binding.webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(PermissionRequest request) {
@@ -121,7 +100,7 @@ public class CallActivity extends AppCompatActivity {
         loadVideoCall();
     }
 
-    public void loadVideoCall() {
+    private void loadVideoCall() {
         String filePath = "file:android_asset/call.html";
         binding.webView.loadUrl(filePath);
 
@@ -134,96 +113,80 @@ public class CallActivity extends AppCompatActivity {
         });
     }
 
-
-    void initializePeer() {
+    private void initializePeer() {
         uniqueId = getUniqueId();
-
         callJavaScriptFunction("javascript:init(\"" + uniqueId + "\")");
 
-        if(createdBy.equalsIgnoreCase(username)) {
-            if(pageExit)
-                return;
+        if (createdBy.equalsIgnoreCase(username)) {
+            if (pageExit) return;
             firebaseRef.child(username).child("connId").setValue(uniqueId);
             firebaseRef.child(username).child("isAvailable").setValue(true);
 
             binding.loadingGroup.setVisibility(View.GONE);
             binding.controls.setVisibility(View.VISIBLE);
 
-            FirebaseDatabase.getInstance().getReference()
-                    .child("profiles")
-                    .child(friendsUsername)
-                    .addListenerForSingleValueEvent(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(@NonNull @NotNull DataSnapshot snapshot) {
-                            User user = snapshot.getValue(User.class);
-
-                            Glide.with(CallActivity.this).load(user.getProfile())
-                                    .into(binding.profile);
-                            binding.name.setText(user.getName());
-                            binding.city.setText(user.getCity());
-
-                        }
-
-                        @Override
-                        public void onCancelled(@NonNull @NotNull DatabaseError error) {
-
-                        }
-                    });
-
+            loadUserProfile(friendsUsername);
         } else {
             new Handler().postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     friendsUsername = createdBy;
-                    FirebaseDatabase.getInstance().getReference()
-                            .child("profiles")
-                            .child(friendsUsername)
-                            .addListenerForSingleValueEvent(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(@NonNull @NotNull DataSnapshot snapshot) {
-                                    User user = snapshot.getValue(User.class);
-
-                                    Glide.with(CallActivity.this).load(user.getProfile())
-                                            .into(binding.profile);
-                                    binding.name.setText(user.getName());
-                                    binding.city.setText(user.getCity());
-
-                                }
-
-                                @Override
-                                public void onCancelled(@NonNull @NotNull DatabaseError error) {
-
-                                }
-                            });
-                    FirebaseDatabase.getInstance().getReference()
-                            .child("users")
-                            .child(friendsUsername)
-                            .child("connId")
-                            .addListenerForSingleValueEvent(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(@NonNull @NotNull DataSnapshot snapshot) {
-                                    if(snapshot.getValue() != null) {
-                                        sendCallRequest();
-                                    }
-                                }
-
-                                @Override
-                                public void onCancelled(@NonNull @NotNull DatabaseError error) {
-
-                                }
-                            });
+                    loadUserProfile(friendsUsername);
+                    getFriendsConnectionId();
                 }
             }, 3000);
         }
-
     }
 
-    public void onPeerConnected(){
+    private void loadUserProfile(String userName) {
+        FirebaseDatabase.getInstance().getReference()
+                .child("profiles")
+                .child(userName)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull @NotNull DataSnapshot snapshot) {
+                        User user = snapshot.getValue(User.class);
+
+                        if (user != null) {
+                            Glide.with(CallActivity.this).load(user.getProfile()).into(binding.profile);
+                            binding.name.setText(user.getName());
+                            binding.city.setText(user.getCity());
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull @NotNull DatabaseError error) {
+                        Toast.makeText(CallActivity.this, "Failed to load user profile.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void getFriendsConnectionId() {
+        FirebaseDatabase.getInstance().getReference()
+                .child("users")
+                .child(friendsUsername)
+                .child("connId")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull @NotNull DataSnapshot snapshot) {
+                        if (snapshot.getValue() != null) {
+                            sendCallRequest();
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull @NotNull DatabaseError error) {
+                        Toast.makeText(CallActivity.this, "Failed to get connection ID.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    public void onPeerConnected() {
         isPeerConnected = true;
     }
 
-    void sendCallRequest(){
-        if(!isPeerConnected) {
+    private void sendCallRequest() {
+        if (!isPeerConnected) {
             Toast.makeText(this, "You are not connected. Please check your internet.", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -231,27 +194,26 @@ public class CallActivity extends AppCompatActivity {
         listenConnId();
     }
 
-    void listenConnId() {
+    private void listenConnId() {
         firebaseRef.child(friendsUsername).child("connId").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull @NotNull DataSnapshot snapshot) {
-                if(snapshot.getValue() == null)
-                    return;
+                if (snapshot.getValue() == null) return;
 
                 binding.loadingGroup.setVisibility(View.GONE);
                 binding.controls.setVisibility(View.VISIBLE);
                 String connId = snapshot.getValue(String.class);
-                callJavaScriptFunction("javascript:startCall(\""+connId+"\")");
+                callJavaScriptFunction("javascript:startCall(\"" + connId + "\")");
             }
 
             @Override
             public void onCancelled(@NonNull @NotNull DatabaseError error) {
-
+                Toast.makeText(CallActivity.this, "Failed to listen for connection ID.", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    void callJavaScriptFunction(String function){
+    private void callJavaScriptFunction(String function) {
         binding.webView.post(new Runnable() {
             @Override
             public void run() {
@@ -260,8 +222,28 @@ public class CallActivity extends AppCompatActivity {
         });
     }
 
-    String getUniqueId(){
+    private String getUniqueId() {
         return UUID.randomUUID().toString();
+    }
+
+    private void toggleAudio() {
+        isAudio = !isAudio;
+        callJavaScriptFunction("javascript:toggleAudio(\"" + isAudio + "\")");
+        if (isAudio) {
+            binding.micBtn.setImageResource(R.drawable.btn_unmute_normal);
+        } else {
+            binding.micBtn.setImageResource(R.drawable.btn_mute_normal);
+        }
+    }
+
+    private void toggleVideo() {
+        isVideo = !isVideo;
+        callJavaScriptFunction("javascript:toggleVideo(\"" + isVideo + "\")");
+        if (isVideo) {
+            binding.videoBtn.setImageResource(R.drawable.btn_video_normal);
+        } else {
+            binding.videoBtn.setImageResource(R.drawable.btn_video_muted);
+        }
     }
 
     @Override
@@ -270,4 +252,5 @@ public class CallActivity extends AppCompatActivity {
         pageExit = true;
         firebaseRef.child(createdBy).setValue(null);
         finish();
-    }}
+    }
+}

@@ -56,7 +56,7 @@ public class RewardActivity extends AppCompatActivity {
                     }
                 });
 
-        binding.video2.setOnClickListener(new View.OnClickListener() {
+        binding.video1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (mRewardedAd != null) {
@@ -71,6 +71,28 @@ public class RewardActivity extends AppCompatActivity {
                                     .child("coins")
                                     .setValue(coins);
                             binding.video1Icon.setImageResource(R.drawable.check);
+                        }
+                    });
+                } else {
+
+                }
+            }
+        });
+        binding.video2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (mRewardedAd != null) {
+                    Activity activityContext = RewardActivity.this;
+                    mRewardedAd.show(activityContext, new OnUserEarnedRewardListener() {
+                        @Override
+                        public void onUserEarnedReward(@NonNull RewardItem rewardItem) {
+                            loadAd();
+                            coins = coins + 300;
+                            database.getReference().child("profiles")
+                                    .child(currentUid)
+                                    .child("coins")
+                                    .setValue(coins);
+                            binding.videoIcon2.setImageResource(R.drawable.check);
                         }
                     });
                 } else {
@@ -93,7 +115,7 @@ public class RewardActivity extends AppCompatActivity {
                                     .child(currentUid)
                                     .child("coins")
                                     .setValue(coins);
-                            binding.video1Icon.setImageResource(R.drawable.check);
+                            binding.videoIcon3.setImageResource(R.drawable.check);
                         }
                     });
                 } else {
@@ -116,7 +138,7 @@ public class RewardActivity extends AppCompatActivity {
                                     .child(currentUid)
                                     .child("coins")
                                     .setValue(coins);
-                            binding.video1Icon.setImageResource(R.drawable.check);
+                            binding.videoIcon4.setImageResource(R.drawable.check);
                         }
                     });
                 } else {
@@ -139,7 +161,7 @@ public class RewardActivity extends AppCompatActivity {
                                     .child(currentUid)
                                     .child("coins")
                                     .setValue(coins);
-                            binding.video1Icon.setImageResource(R.drawable.check);
+                            binding.videoIcon5.setImageResource(R.drawable.check);
                         }
                     });
                 } else {

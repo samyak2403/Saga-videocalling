@@ -1,41 +1,42 @@
 {
   "project_info": {
-    "project_number": "511037115284",
-    "project_id": "sagavideocall",
-    "storage_bucket": "sagavideocall.appspot.com"
+    "project_number": "161859669361",
+    "firebase_url": "https://saga-video-calling-app-default-rtdb.firebaseio.com",
+    "project_id": "saga-video-calling-app",
+    "storage_bucket": "saga-video-calling-app.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:511037115284:android:8211784c6501ef95e49d81",
+        "mobilesdk_app_id": "1:161859669361:android:1d86cf4f91c73723e4fad0",
         "android_client_info": {
           "package_name": "com.arrowwould.saga"
         }
       },
       "oauth_client": [
         {
-          "client_id": "511037115284-ufvli8ic6h6ali2ah7mpjtr73oi9gvvd.apps.googleusercontent.com",
+          "client_id": "161859669361-sqvij9r9ccpqciok939aaksidlqdat0i.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.arrowwould.saga",
-            "certificate_hash": "1f251d692836d249fed507f23401b7d60900a01b"
+            "certificate_hash": "9ddc9bc5a814264aa72406cec5d7d3c4f814466b"
           }
         },
         {
-          "client_id": "511037115284-egbnmdl9jp35sgen4m149r45giq07bap.apps.googleusercontent.com",
+          "client_id": "161859669361-kon4cmoselpecospq852n6qndg13v0mq.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBUdz_8LSuGuloiS-6Xt3AAojhBaDFDCq0"
+          "current_key": "AIzaSyBUGNbhgi-q_8EZtlADqo0hL9rVPLPQF_Q"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "511037115284-egbnmdl9jp35sgen4m149r45giq07bap.apps.googleusercontent.com",
+              "client_id": "161859669361-kon4cmoselpecospq852n6qndg13v0mq.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
